@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>El Vuelo de Lía - Flipbook con Efecto 3D</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #4ade80 0%, #22c55e 50%, #16a34a 100%);
+            position: relative;
+            min-height: 100vh;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .navbar {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .breadcrumbs {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.95rem;
+            color: #555;
+        }
+
+        .breadcrumbs a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s ease;
+        }
+
+        .breadcrumbs a:hover {
+            color: #764ba2;
+        }
+
+        .breadcrumbs .separator {
+            color: #999;
+        }
+
+        .breadcrumbs .current {
+            color: #333;
+            font-weight: 600;
+        }
+
+        .home-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem 1.2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+            margin-left: auto;
+        }
+
+        .home-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        .book-title {
+            color: white;
+            font-size: 2rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 2rem;
+            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Contenedor del libro 3D */
+        .book-container {
+            perspective: 2000px;
+            max-width: 900px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .book {
+            position: relative;
+            width: 100%;
+            height: 600px;
+            transform-style: preserve-3d;
+            transition: transform 0.5s ease;
+        }
+
+        /* Páginas del libro */
+        .page-wrapper {
+            position: absolute;
+            width: 50%;
+            height: 100%;
+            top: 0;
+            transform-style: preserve-3d;
+            transform-origin: left center;
+            transition: transform 0.8s cubic-bezier(0.645, 0.045, 0.355, 1);
+        }
+
+        .page-wrapper.left {
+            left: 0;
+            transform-origin: right center;
+        }
+
+        .page-wrapper.right {
+            right: 0;
+            transform-origin: left center;
+        }
+
+        .page-wrapper.flipping {
+            z-index: 10;
+        }
+
+        .page-wrapper.flipped {
+            transform: rotateY(-180deg);
+        }
+
+        .page {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: white;
+            border-radius: 0 8px 8px 0;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            backface-visibility: hidden;
+            overflow: hidden;
+        }
+
+        .page.front {
+            transform: rotateY(0deg);
+        }
+
+        .page.back {
+            transform: rotateY(180deg);
+        }
+
+        .page canvas {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        /* Controles */
+        .controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1.5rem;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .control-btn {
+            padding: 0.8rem 1.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .control-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+        }
+
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .page-info {
+            padding: 0.8rem 1.5rem;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            font-weight: 600;
+            color: #333;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: white;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        /* Vista de libro abierto */
+        .book-open {
+            display: flex;
+            gap: 0;
+            max-width: 1200px;
+            width: 100%;
+            height: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .book-page {
+            flex: 1;
+            position: relative;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .book-page.left {
+            border-right: 2px solid #e5e7eb;
+        }
+
+        .book-page canvas {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        /* Efecto de sombra central del libro */
+        .book-spine {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            width: 20px;
+            height: 100%;
+            transform: translateX(-50%);
+            background: linear-gradient(to right,
+                    rgba(0, 0, 0, 0.1) 0%,
+                    rgba(0, 0, 0, 0.05) 50%,
+                    rgba(0, 0, 0, 0.1) 100%);
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 1rem;
+            }
+
+            .breadcrumbs {
+                font-size: 0.85rem;
+            }
+
+            .book-title {
+                font-size: 1.5rem;
+            }
+
+            .book-open {
+                flex-direction: column;
+                height: auto;
+            }
+
+            .book-page.left {
+                border-right: none;
+                border-bottom: 2px solid #e5e7eb;
+            }
+
+            .controls {
+                gap: 0.8rem;
+            }
+
+            .control-btn {
+                padding: 0.6rem 1rem;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+            <div class="breadcrumbs">
+                <a href="index.html">🏠 Inicio</a>
+                <span class="separator">›</span>
+                <span class="current">El Vuelo de Lía</span>
+            </div>
+            <a href="index.html" class="home-btn">← Volver al inicio</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1 class="book-title">🦅 El Vuelo de Lía</h1>
+
+        <div class="loading" id="loading">Cargando cuento mágico... ✨</div>
+
+        <div class="book-open" id="book-container" style="display: none;">
+            <div class="book-page left">
+                <canvas id="canvas-left"></canvas>
+            </div>
+            <div class="book-spine"></div>
+            <div class="book-page">
+                <canvas id="canvas-right"></canvas>
+            </div>
+        </div>
+
+        <div class="controls" id="controls" style="display: none;">
+            <button class="control-btn" id="prev-btn" disabled>← Anterior</button>
+            <div class="page-info">
+                Página <span id="page-num">1</span> de <span id="page-count">-</span>
+            </div>
+            <button class="control-btn" id="next-btn">Siguiente →</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        const pdfPath = 'El-Vuelo-de Lia.pdf';
+        let pdfDoc = null;
+        let currentPage = 1;
+        const scale = 1.5;
+
+        const canvasLeft = document.getElementById('canvas-left');
+        const canvasRight = document.getElementById('canvas-right');
+        const ctxLeft = canvasLeft.getContext('2d');
+        const ctxRight = canvasRight.getContext('2d');
+        const loading = document.getElementById('loading');
+        const bookContainer = document.getElementById('book-container');
+        const controls = document.getElementById('controls');
+
+        async function renderPages() {
+            if (!pdfDoc) return;
+
+            // Renderizar página izquierda (si existe)
+            if (currentPage > 1) {
+                const pageLeft = await pdfDoc.getPage(currentPage - 1);
+                const viewportLeft = pageLeft.getViewport({ scale: scale });
+                canvasLeft.height = viewportLeft.height;
+                canvasLeft.width = viewportLeft.width;
+                await pageLeft.render({
+                    canvasContext: ctxLeft,
+                    viewport: viewportLeft
+                }).promise;
+                canvasLeft.style.display = 'block';
+            } else {
+                canvasLeft.style.display = 'none';
+            }
+
+            // Renderizar página derecha
+            if (currentPage <= pdfDoc.numPages) {
+                const pageRight = await pdfDoc.getPage(currentPage);
+                const viewportRight = pageRight.getViewport({ scale: scale });
+                canvasRight.height = viewportRight.height;
+                canvasRight.width = viewportRight.width;
+                await pageRight.render({
+                    canvasContext: ctxRight,
+                    viewport: viewportRight
+                }).promise;
+                canvasRight.style.display = 'block';
+            } else {
+                canvasRight.style.display = 'none';
+            }
+
+            updateControls();
+        }
+
+        function updateControls() {
+            document.getElementById('page-num').textContent = currentPage;
+            document.getElementById('prev-btn').disabled = currentPage <= 1;
+            document.getElementById('next-btn').disabled = currentPage >= pdfDoc.numPages;
+        }
+
+        function nextPage() {
+            if (currentPage < pdfDoc.numPages) {
+                currentPage += 2; // Avanzar 2 páginas (libro abierto)
+                if (currentPage > pdfDoc.numPages) currentPage = pdfDoc.numPages;
+                renderPages();
+            }
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                currentPage -= 2; // Retroceder 2 páginas
+                if (currentPage < 1) currentPage = 1;
+                renderPages();
+            }
+        }
+
+        document.getElementById('prev-btn').addEventListener('click', prevPage);
+        document.getElementById('next-btn').addEventListener('click', nextPage);
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'ArrowLeft') prevPage();
+            if (e.key === 'ArrowRight') nextPage();
+        });
+
+        // Cargar PDF
+        pdfjsLib.getDocument(pdfPath).promise.then(function (pdf) {
+            pdfDoc = pdf;
+            document.getElementById('page-count').textContent = pdf.numPages;
+
+            loading.style.display = 'none';
+            bookContainer.style.display = 'flex';
+            controls.style.display = 'flex';
+
+            renderPages();
+        }).catch(function (error) {
+            loading.textContent = 'Error al cargar el cuento. Por favor, recarga la página.';
+            console.error('Error cargando PDF:', error);
+        });
+    </script>
+</body>
+
+</html>
